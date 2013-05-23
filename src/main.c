@@ -15,10 +15,20 @@ PBL_APP_INFO(MY_UUID,
              RESOURCE_ID_IMAGE_MENU_ICON,
              APP_INFO_WATCH_FACE);
 
-#define WEATHER_HTTP_COOKIE 1138158163
-#define SPLASH_COOKIE       1166677173
+// POST variables
+#define WEATHER_KEY_LATITUDE 1
+#define WEATHER_KEY_LONGITUDE 2
+#define WEATHER_KEY_UNIT_SYSTEM 3
+// Received variables
+#define WEATHER_KEY_ICON 1
+#define WEATHER_KEY_TEMPERATURE 2
+
+#define WEATHER_HTTP_COOKIE  1290352054
+#define WEATHER_TIMER_COOKIE 1138158163
+#define SPLASH_TIMER_COOKIE  1166677173
 
 #define STARTDELAY 2000
+#define WEATHER_FETCH_FREQUENCY 1800000
 	
 #define SCREEN_WIDTH 144
 #define SCREEN_HEIGHT 168
@@ -41,10 +51,70 @@ static TimeLayer time_layer;
 static WeatherLayer weather_layer;
 
 static int our_latitude, our_longitude;
-static bool located;
+static bool located = false;
 
 static bool splashEnded = false;
 
+
+void request_weather() {
+	if(!located) {
+		http_location_request();
+		return;
+	}
+	// Build the HTTP request
+	DictionaryIterator *body;
+	HTTPResult result = http_out_get("http://pwdb.kathar.in/pebble/weather2.php", WEATHER_HTTP_COOKIE, &body);
+	if(result != HTTP_OK) {
+		weather_layer_clear_icon(&weather_layer);
+		weather_layer_clear_temp(&weather_layer);
+		return;
+	}
+	dict_write_int32(body, WEATHER_KEY_LATITUDE, our_latitude);
+	dict_write_int32(body, WEATHER_KEY_LONGITUDE, our_longitude);
+	dict_write_cstring(body, WEATHER_KEY_UNIT_SYSTEM, UNIT_SYSTEM);
+	// Send it.
+	if(http_out_send() != HTTP_OK) {
+		weather_layer_clear_icon(&weather_layer);
+		weather_layer_clear_temp(&weather_layer);
+		return;
+	}
+}
+
+void failed(int32_t cookie, int http_status, void* ctx) {
+	if(cookie == 0 || cookie == WEATHER_HTTP_COOKIE) {
+		weather_layer_clear_icon(&weather_layer);
+		weather_layer_clear_temp(&weather_layer);
+	}
+}
+
+void success(int32_t cookie, int http_status, DictionaryIterator* received, void* ctx) {
+	if(cookie != WEATHER_HTTP_COOKIE) return;
+	Tuple* icon_tuple = dict_find(received, WEATHER_KEY_ICON);
+	if(icon_tuple) {
+		int icon = icon_tuple->value->int8;
+		if(icon >= 0 && icon < 10) {
+			weather_layer_set_icon(&weather_layer, icon);
+		} else {
+			weather_layer_clear_icon(&weather_layer);
+		}
+	}
+	Tuple* temperature_tuple = dict_find(received, WEATHER_KEY_TEMPERATURE);
+	if(temperature_tuple) {
+		weather_layer_set_temp(&weather_layer, temperature_tuple->value->int16);
+	}
+}
+
+void reconnect(void* ctx) {
+	http_location_request();
+}
+
+void location(float latitude, float longitude, float altitude, float accuracy, void* ctx) {
+	// Fix the floats
+	our_latitude = latitude * 10000;
+	our_longitude = longitude * 10000;
+	located = true;
+	request_weather();
+}
 
 void handle_tick(AppContextRef ctx, PebbleTickEvent *evt) {
     if (splashEnded) {
@@ -59,11 +129,13 @@ void handle_tick(AppContextRef ctx, PebbleTickEvent *evt) {
 }
 
 void handle_timer(AppContextRef ctx, AppTimerHandle handle, uint32_t cookie) {
-	if(cookie == SPLASH_COOKIE) {
+	if(cookie == SPLASH_TIMER_COOKIE) {
 	    splashEnded = true;
 	    handle_tick(ctx, NULL);
-	} else if(cookie == WEATHER_HTTP_COOKIE) {
-
+	} else if(cookie == WEATHER_TIMER_COOKIE) {
+		http_location_request();
+		// Update again in fifteen minutes.
+		app_timer_send_event(ctx, WEATHER_FETCH_FREQUENCY, WEATHER_TIMER_COOKIE);
 	}
 }
 
@@ -81,7 +153,17 @@ void handle_init(AppContextRef ctx) {
 	weather_layer_init(&weather_layer, GPoint(ORIGIN_X, WEATHER_ORIGIN_Y));
 	layer_add_child(&window.layer, &weather_layer.layer);
 
-	app_timer_send_event(ctx, STARTDELAY /* milliseconds */, SPLASH_COOKIE);
+	app_timer_send_event(ctx, STARTDELAY, SPLASH_TIMER_COOKIE);
+
+	HTTPCallbacks callbacks = {
+		.failure   = failed,
+		.success   = success,
+		.reconnect = reconnect,
+		.location  = location
+	};
+	http_register_callbacks(callbacks, (void*)ctx);
+
+	http_location_request();
 }
 
 void handle_deinit(AppContextRef ctx) {
