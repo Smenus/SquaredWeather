@@ -88,7 +88,9 @@ void failed(int32_t cookie, int http_status, void* ctx) {
 }
 
 void success(int32_t cookie, int http_status, DictionaryIterator* received, void* ctx) {
-	if(cookie != WEATHER_HTTP_COOKIE) return;
+	if(cookie != WEATHER_HTTP_COOKIE) {
+		return;
+	}
 	Tuple* icon_tuple = dict_find(received, WEATHER_KEY_ICON);
 	if(icon_tuple) {
 		int icon = icon_tuple->value->int8;
@@ -114,6 +116,7 @@ void location(float latitude, float longitude, float altitude, float accuracy, v
 	our_longitude = longitude * 10000;
 	located = true;
 	request_weather();
+	app_timer_send_event(ctx, WEATHER_FETCH_FREQUENCY, WEATHER_TIMER_COOKIE);
 }
 
 void handle_tick(AppContextRef ctx, PebbleTickEvent *evt) {
@@ -132,10 +135,9 @@ void handle_timer(AppContextRef ctx, AppTimerHandle handle, uint32_t cookie) {
 	if(cookie == SPLASH_TIMER_COOKIE) {
 	    splashEnded = true;
 	    handle_tick(ctx, NULL);
+		http_location_request();
 	} else if(cookie == WEATHER_TIMER_COOKIE) {
 		http_location_request();
-		// Update again in fifteen minutes.
-		app_timer_send_event(ctx, WEATHER_FETCH_FREQUENCY, WEATHER_TIMER_COOKIE);
 	}
 }
 
@@ -155,6 +157,7 @@ void handle_init(AppContextRef ctx) {
 
 	app_timer_send_event(ctx, STARTDELAY, SPLASH_TIMER_COOKIE);
 
+	http_set_app_id(WEATHER_HTTP_COOKIE);
 	HTTPCallbacks callbacks = {
 		.failure   = failed,
 		.success   = success,
@@ -162,8 +165,6 @@ void handle_init(AppContextRef ctx) {
 		.location  = location
 	};
 	http_register_callbacks(callbacks, (void*)ctx);
-
-	http_location_request();
 }
 
 void handle_deinit(AppContextRef ctx) {
@@ -184,6 +185,13 @@ void pbl_main(void *params) {
 		.tick_info = {
 			.tick_handler = &handle_tick,
 			.tick_units   = MINUTE_UNIT
+		},
+
+		.messaging_info = {
+			.buffer_sizes = {
+				.inbound = 256,
+				.outbound = 256,
+			}
 		}
 	};
 	app_event_loop(params, &handlers);
