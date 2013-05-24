@@ -83,7 +83,7 @@ void weather_layer_animate(Animation *anim, const uint32_t normTime) {
 
 void weather_layer_set_icon(WeatherLayer* weather_layer, WeatherIcon icon) {
     if(icon == weather_layer->icon) return;
-    
+
 	if(weather_layer->has_weather_icon) {
 		layer_remove_from_parent(&weather_layer->icon_layer.layer.layer);
 		bmp_deinit_container(&weather_layer->icon_layer);
@@ -98,7 +98,7 @@ void weather_layer_set_icon(WeatherLayer* weather_layer, WeatherIcon icon) {
 	weather_layer->icon = icon;
 }
 
-void weather_layer_set_temp(WeatherLayer* weather_layer, uint16_t temp) {
+void weather_layer_set_temp(WeatherLayer* weather_layer, uint16_t temp, int8_t is_c) {
     if (animation_is_scheduled(&weather_anim))
             animation_unschedule(&weather_anim);
 
@@ -108,7 +108,14 @@ void weather_layer_set_temp(WeatherLayer* weather_layer, uint16_t temp) {
     
     weather_layer->slots[0].curDigit = temp/10;
     weather_layer->slots[1].curDigit = temp%10;
-    weather_layer->slots[2].curDigit = 12;
+
+    if(is_c == 1) {
+        weather_layer->slots[2].curDigit = 12;
+    } else if(is_c == 0) {
+        weather_layer->slots[2].curDigit = 13;
+    } else {
+        weather_layer->slots[2].curDigit = 14;
+    }
     
     if (NO_ZERO && weather_layer->slots[0].curDigit == 0) {
         weather_layer->slots[0].curDigit = 10;

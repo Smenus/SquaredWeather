@@ -22,6 +22,7 @@ PBL_APP_INFO(MY_UUID,
 // Received variables
 #define WEATHER_KEY_ICON 1
 #define WEATHER_KEY_TEMPERATURE 2
+#define WEATHER_KEY_IS_C 3
 
 #define WEATHER_HTTP_COOKIE  1290352054
 #define WEATHER_TIMER_COOKIE 1138158163
@@ -107,7 +108,12 @@ void success(int32_t cookie, int http_status, DictionaryIterator* received, void
 
 	Tuple* temperature_tuple = dict_find(received, WEATHER_KEY_TEMPERATURE);
 	if(temperature_tuple) {
-		weather_layer_set_temp(&weather_layer, temperature_tuple->value->int16);
+		Tuple* is_c_tuple = dict_find(received, WEATHER_KEY_IS_C);
+		if(is_c_tuple) {
+			weather_layer_set_temp(&weather_layer, temperature_tuple->value->int16, is_c_tuple->value->int8);
+		} else {
+			weather_layer_set_temp(&weather_layer, temperature_tuple->value->int16, -1);
+		}
 	}
 }
 
@@ -199,7 +205,7 @@ void pbl_main(void *params) {
 
 		.messaging_info = {
 			.buffer_sizes = {
-				.inbound = 256,
+				.inbound = 124,
 				.outbound = 256,
 			}
 		}

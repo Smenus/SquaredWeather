@@ -34,7 +34,7 @@ void weather_layer_init(WeatherLayer* weather_layer, GPoint top_left);
 void weather_layer_deinit(WeatherLayer* weather_layer);
 void weather_layer_animate(Animation *anim, const uint32_t normTime);
 void weather_layer_set_icon(WeatherLayer* weather_layer, WeatherIcon icon);
-void weather_layer_set_temp(WeatherLayer* weather_layer, uint16_t temp);
+void weather_layer_set_temp(WeatherLayer* weather_layer, uint16_t temp, int8_t is_c);
 void weather_layer_clear_icon(WeatherLayer* weather_layer);
 void weather_layer_clear_temp(WeatherLayer* weather_layer);
 
