@@ -82,7 +82,9 @@ void weather_layer_animate(Animation *anim, const uint32_t normTime) {
 }
 
 void weather_layer_set_icon(WeatherLayer* weather_layer, WeatherIcon icon) {
-	if(icon != weather_layer->icon && weather_layer->has_weather_icon) {
+    if(icon == weather_layer->icon) return;
+    
+	if(weather_layer->has_weather_icon) {
 		layer_remove_from_parent(&weather_layer->icon_layer.layer.layer);
 		bmp_deinit_container(&weather_layer->icon_layer);
 		weather_layer->has_weather_icon = false;

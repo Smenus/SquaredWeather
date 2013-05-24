@@ -27,6 +27,9 @@ PBL_APP_INFO(MY_UUID,
 #define WEATHER_TIMER_COOKIE 1138158163
 #define SPLASH_TIMER_COOKIE  1166677173
 
+//#define WEATHER_API_ENDPOINT "http://pwdb.kathar.in/pebble/weather2.php"
+#define WEATHER_API_ENDPOINT "http://91.121.105.51/~smenusco/weather.php"
+
 #define STARTDELAY 2000
 #define WEATHER_FETCH_FREQUENCY 1800000
 	
@@ -63,7 +66,7 @@ void request_weather() {
 	}
 	// Build the HTTP request
 	DictionaryIterator *body;
-	HTTPResult result = http_out_get("http://pwdb.kathar.in/pebble/weather2.php", WEATHER_HTTP_COOKIE, &body);
+	HTTPResult result = http_out_get(WEATHER_API_ENDPOINT, WEATHER_HTTP_COOKIE, &body);
 	if(result != HTTP_OK) {
 		weather_layer_clear_icon(&weather_layer);
 		weather_layer_clear_temp(&weather_layer);
@@ -85,12 +88,13 @@ void failed(int32_t cookie, int http_status, void* ctx) {
 		weather_layer_clear_icon(&weather_layer);
 		weather_layer_clear_temp(&weather_layer);
 	}
+	located = false;
+	http_location_request();
 }
 
 void success(int32_t cookie, int http_status, DictionaryIterator* received, void* ctx) {
-	if(cookie != WEATHER_HTTP_COOKIE) {
-		return;
-	}
+	if(cookie != WEATHER_HTTP_COOKIE) return;
+
 	Tuple* icon_tuple = dict_find(received, WEATHER_KEY_ICON);
 	if(icon_tuple) {
 		int icon = icon_tuple->value->int8;
@@ -100,6 +104,7 @@ void success(int32_t cookie, int http_status, DictionaryIterator* received, void
 			weather_layer_clear_icon(&weather_layer);
 		}
 	}
+
 	Tuple* temperature_tuple = dict_find(received, WEATHER_KEY_TEMPERATURE);
 	if(temperature_tuple) {
 		weather_layer_set_temp(&weather_layer, temperature_tuple->value->int16);
@@ -107,6 +112,7 @@ void success(int32_t cookie, int http_status, DictionaryIterator* received, void
 }
 
 void reconnect(void* ctx) {
+	located = false;
 	http_location_request();
 }
 
@@ -128,6 +134,10 @@ void handle_tick(AppContextRef ctx, PebbleTickEvent *evt) {
         } else {
         	time_layer_set_time(&time_layer, *(evt->tick_time));
         }
+        // If there's been an error, reaquire a location and weather
+        if(!located) {
+        	http_location_request();
+        }
     }
 }
 
@@ -135,8 +145,8 @@ void handle_timer(AppContextRef ctx, AppTimerHandle handle, uint32_t cookie) {
 	if(cookie == SPLASH_TIMER_COOKIE) {
 	    splashEnded = true;
 	    handle_tick(ctx, NULL);
-		http_location_request();
 	} else if(cookie == WEATHER_TIMER_COOKIE) {
+		located = false;
 		http_location_request();
 	}
 }
