@@ -8,6 +8,7 @@ A nicely animated square-ish watchface - now with weather!
 This is a modified version of lastfuture's excellent Squared watchface, with weather fetching adding.
 
 Weather fetching is courtesy of Katharine's httppebble.
+Weather data is powered by Forecast.io.
 
 ---
 
