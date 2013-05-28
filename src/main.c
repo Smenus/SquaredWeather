@@ -29,7 +29,7 @@ PBL_APP_INFO(MY_UUID,
 #define SPLASH_TIMER_COOKIE  1166677173
 
 //#define WEATHER_API_ENDPOINT "http://pwdb.kathar.in/pebble/weather2.php"
-#define WEATHER_API_ENDPOINT "http://91.121.105.51/~smenusco/weather.php"
+#define WEATHER_API_ENDPOINT "http://smenus.com/weather.php"
 
 #define STARTDELAY 2000
 #define WEATHER_FETCH_FREQUENCY 1800000
