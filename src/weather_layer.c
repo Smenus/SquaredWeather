@@ -13,17 +13,17 @@ static int temp_start_digit[TEMP_DIGITS] = {
 };
 
 static uint8_t WEATHER_ICONS[] = {
-	RESOURCE_ID_ICON_CLEAR_DAY,
-	RESOURCE_ID_ICON_CLEAR_NIGHT,
-	RESOURCE_ID_ICON_RAIN,
-	RESOURCE_ID_ICON_SNOW,
-	RESOURCE_ID_ICON_SLEET,
-	RESOURCE_ID_ICON_WIND,
-	RESOURCE_ID_ICON_FOG,
-	RESOURCE_ID_ICON_CLOUDY,
-	RESOURCE_ID_ICON_PARTLY_CLOUDY_DAY,
-	RESOURCE_ID_ICON_PARTLY_CLOUDY_NIGHT,
-	RESOURCE_ID_ICON_ERROR,
+    RESOURCE_ID_ICON_CLEAR_DAY,
+    RESOURCE_ID_ICON_CLEAR_NIGHT,
+    RESOURCE_ID_ICON_RAIN,
+    RESOURCE_ID_ICON_SNOW,
+    RESOURCE_ID_ICON_SLEET,
+    RESOURCE_ID_ICON_WIND,
+    RESOURCE_ID_ICON_FOG,
+    RESOURCE_ID_ICON_CLOUDY,
+    RESOURCE_ID_ICON_PARTLY_CLOUDY_DAY,
+    RESOURCE_ID_ICON_PARTLY_CLOUDY_NIGHT,
+    RESOURCE_ID_ICON_ERROR,
 };
 
 GRect frame_for_temp_digitslot(int i) {
@@ -44,11 +44,11 @@ void weather_layer_init(WeatherLayer* weather_layer, GPoint top_left) {
         layer_add_child(&weather_layer->layer, &weather_layer->slots[i].layer);
     }
 
-	// Note absence of icon layer
-	weather_layer->has_weather_icon = false;
-	weather_layer->icon = WEATHER_ICON_NO_WEATHER;
+    // Note absence of icon layer
+    weather_layer->has_weather_icon = false;
+    weather_layer->icon = WEATHER_ICON_NO_WEATHER;
 
-	weather_anim_impl.setup = NULL;
+    weather_anim_impl.setup = NULL;
     weather_anim_impl.update = weather_layer_animate;
     weather_anim_impl.teardown = NULL;
 
@@ -56,23 +56,28 @@ void weather_layer_init(WeatherLayer* weather_layer, GPoint top_left) {
     animation_set_delay(&weather_anim, 0);
     animation_set_duration(&weather_anim, TEMP_DIGIT_CHANGE_ANIM_DURATION);
     animation_set_implementation(&weather_anim, &weather_anim_impl);
-    animation_set_handlers(&weather_anim, (AnimationHandlers) {NULL, NULL}, weather_layer);
+    animation_set_handlers(&weather_anim, (AnimationHandlers) {
+        NULL, NULL
+    }, weather_layer);
 }
 
 void weather_layer_deinit(WeatherLayer* weather_layer) {
-    if (animation_is_scheduled(&weather_anim))
-            animation_unschedule(&weather_anim);
+    if (animation_is_scheduled(&weather_anim)) {
+        animation_unschedule(&weather_anim);
+    }
 
     layer_remove_child_layers(&weather_layer->layer);
-	if(weather_layer->has_weather_icon) {
-		bmp_deinit_container(&weather_layer->icon_layer);
-		weather_layer->has_weather_icon = false;
-		weather_layer->icon = WEATHER_ICON_NO_WEATHER;
-	}
+
+    if(weather_layer->has_weather_icon) {
+        bmp_deinit_container(&weather_layer->icon_layer);
+        weather_layer->has_weather_icon = false;
+        weather_layer->icon = WEATHER_ICON_NO_WEATHER;
+    }
 }
 
-void weather_layer_animate(Animation *anim, const uint32_t normTime) {
+void weather_layer_animate(Animation* anim, const uint32_t normTime) {
     WeatherLayer* weather_layer = (WeatherLayer*)animation_get_context(anim);
+
     for (int i=0; i<TEMP_DIGITS; i++) {
         if (weather_layer->slots[i].curDigit != weather_layer->slots[i].prevDigit) {
             weather_layer->slots[i].normTime = normTime;
@@ -82,30 +87,33 @@ void weather_layer_animate(Animation *anim, const uint32_t normTime) {
 }
 
 void weather_layer_set_icon(WeatherLayer* weather_layer, WeatherIcon icon) {
-    if(icon == weather_layer->icon) return;
+    if(icon == weather_layer->icon) {
+        return;
+    }
 
-	if(weather_layer->has_weather_icon) {
-		layer_remove_from_parent(&weather_layer->icon_layer.layer.layer);
-		bmp_deinit_container(&weather_layer->icon_layer);
-		weather_layer->has_weather_icon = false;
-		weather_layer->icon = WEATHER_ICON_NO_WEATHER;
-	}
+    if(weather_layer->has_weather_icon) {
+        layer_remove_from_parent(&weather_layer->icon_layer.layer.layer);
+        bmp_deinit_container(&weather_layer->icon_layer);
+        weather_layer->has_weather_icon = false;
+        weather_layer->icon = WEATHER_ICON_NO_WEATHER;
+    }
 
-	bmp_init_container(WEATHER_ICONS[icon], &weather_layer->icon_layer);
-	layer_set_frame(&weather_layer->icon_layer.layer.layer, frame_for_temp_digitslot(3));
-	layer_add_child(&weather_layer->layer, &weather_layer->icon_layer.layer.layer);
-	weather_layer->has_weather_icon = true;
-	weather_layer->icon = icon;
+    bmp_init_container(WEATHER_ICONS[icon], &weather_layer->icon_layer);
+    layer_set_frame(&weather_layer->icon_layer.layer.layer, frame_for_temp_digitslot(3));
+    layer_add_child(&weather_layer->layer, &weather_layer->icon_layer.layer.layer);
+    weather_layer->has_weather_icon = true;
+    weather_layer->icon = icon;
 }
 
 void weather_layer_set_temp(WeatherLayer* weather_layer, uint16_t temp, int8_t is_c) {
-    if (animation_is_scheduled(&weather_anim))
-            animation_unschedule(&weather_anim);
+    if (animation_is_scheduled(&weather_anim)) {
+        animation_unschedule(&weather_anim);
+    }
 
     for (int i=0; i<TEMP_DIGITS; i++) {
         weather_layer->slots[i].prevDigit = weather_layer->slots[i].curDigit;
     }
-    
+
     weather_layer->slots[0].curDigit = temp/10;
     weather_layer->slots[1].curDigit = temp%10;
 
@@ -116,9 +124,10 @@ void weather_layer_set_temp(WeatherLayer* weather_layer, uint16_t temp, int8_t i
     } else {
         weather_layer->slots[2].curDigit = 14;
     }
-    
+
     if (NO_ZERO && weather_layer->slots[0].curDigit == 0) {
         weather_layer->slots[0].curDigit = 10;
+
         if (weather_layer->slots[0].prevDigit == 10) {
             weather_layer->slots[0].curDigit++;
         }
@@ -128,17 +137,18 @@ void weather_layer_set_temp(WeatherLayer* weather_layer, uint16_t temp, int8_t i
 }
 
 void weather_layer_clear_icon(WeatherLayer* weather_layer) {
-	if(weather_layer->has_weather_icon) {
-		layer_remove_from_parent(&weather_layer->icon_layer.layer.layer);
-		bmp_deinit_container(&weather_layer->icon_layer);
-		weather_layer->has_weather_icon = false;
-		weather_layer->icon = WEATHER_ICON_NO_WEATHER;
-	}
+    if(weather_layer->has_weather_icon) {
+        layer_remove_from_parent(&weather_layer->icon_layer.layer.layer);
+        bmp_deinit_container(&weather_layer->icon_layer);
+        weather_layer->has_weather_icon = false;
+        weather_layer->icon = WEATHER_ICON_NO_WEATHER;
+    }
 }
 
 void weather_layer_clear_temp(WeatherLayer* weather_layer) {
-    if (animation_is_scheduled(&weather_anim))
-            animation_unschedule(&weather_anim);
+    if (animation_is_scheduled(&weather_anim)) {
+        animation_unschedule(&weather_anim);
+    }
 
     for (int i=0; i<TEMP_DIGITS; i++) {
         weather_layer->slots[i].prevDigit = weather_layer->slots[i].curDigit;

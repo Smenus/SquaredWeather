@@ -13,7 +13,7 @@ typedef struct {
 
 void time_layer_init(TimeLayer* time_layer, GPoint top_left);
 void time_layer_deinit(TimeLayer* time_layer);
-void time_layer_animate(Animation *anim, const uint32_t normTime);
+void time_layer_animate(Animation* anim, const uint32_t normTime);
 void time_layer_set_time(TimeLayer* time_layer, PblTm time);
 
 #endif
